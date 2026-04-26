@@ -198,77 +198,135 @@
 
 {% block extra_js %}
 <script>
-    // Функция обновления прогресса на странице
-    function updateProjectProgress(progress) {
-        const progressBar = document.getElementById('progressBar');
-        const progressPercent = document.getElementById('progressPercent');
-        
-        if (progressBar && progressPercent) {
-            progressBar.style.width = progress + '%';
-            progressPercent.textContent = progress + '%';
-            progressBar.classList.add('progress-updated');
-            setTimeout(() => {
-                progressBar.classList.remove('progress-updated');
-            }, 500);
+// Функция обновления прогресса на странице
+function updateProjectProgress(progress) {
+    const progressBar = document.getElementById('progressBar');
+    const progressPercent = document.getElementById('progressPercent');
+    
+    if (progressBar && progressPercent) {
+        progressBar.style.width = progress + '%';
+        progressPercent.textContent = progress + '%';
+        progressBar.classList.add('progress-updated');
+        setTimeout(() => {
+            progressBar.classList.remove('progress-updated');
+        }, 500);
+    }
+}
+
+// Функция обновления счетчиков задач
+function updateTaskCounters() {
+    const totalTasks = document.querySelectorAll('#tasksTable tbody tr').length;
+    const completedTasks = document.querySelectorAll('#tasksTable tbody tr.task-completed').length;
+    
+    const totalSpan = document.getElementById('totalTasks');
+    const completedSpan = document.getElementById('completedTasks');
+    
+    if (totalSpan) totalSpan.textContent = totalTasks;
+    if (completedSpan) completedSpan.textContent = completedTasks;
+}
+
+// Функция показа уведомлений
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+        animation: slideIn 0.3s ease;
+    `;
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Добавляем CSS анимацию
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
         }
     }
+`;
+document.head.appendChild(style);
+
+// Флаг для предотвращения множественных запросов
+let isUpdating = false;
+
+// Обработка чекбоксов (быстрое переключение статуса)
+document.querySelectorAll('.task-checkbox').forEach(checkbox => {
+    // Удаляем старые обработчики, чтобы избежать дублирования
+    const newCheckbox = checkbox.cloneNode(true);
+    checkbox.parentNode.replaceChild(newCheckbox, checkbox);
     
-    // Функция обновления счетчиков задач
-    function updateTaskCounters() {
-        const totalTasks = document.querySelectorAll('#tasksTable tbody tr').length;
-        const completedTasks = document.querySelectorAll('#tasksTable tbody tr.task-completed').length;
+    newCheckbox.addEventListener('change', function(e) {
+        // Предотвращаем всплытие события
+        e.stopPropagation();
         
-        const totalSpan = document.getElementById('totalTasks');
-        const completedSpan = document.getElementById('completedTasks');
+        // Если уже идет обновление, игнорируем
+        if (isUpdating) {
+            this.checked = !this.checked;
+            return;
+        }
         
-        if (totalSpan) totalSpan.textContent = totalTasks;
-        if (completedSpan) completedSpan.textContent = completedTasks;
-    }
-    
-    // Обработка чекбоксов (быстрое переключение статуса)
-    document.querySelectorAll('.task-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const taskId = this.dataset.taskId;
-            const row = document.getElementById(`task-${taskId}`);
-            const wasChecked = this.checked;
-            
-            // Оптимистичное обновление UI
-            if (wasChecked) {
-                row.classList.add('task-completed');
-                // Обновляем выпадающий список
-                const statusSelect = row.querySelector('.task-status-select');
-                if (statusSelect) statusSelect.value = 'Завершена';
-            } else {
-                row.classList.remove('task-completed');
-                const statusSelect = row.querySelector('.task-status-select');
-                if (statusSelect) statusSelect.value = 'Новая';
+        const taskId = this.dataset.taskId;
+        const row = document.getElementById(`task-${taskId}`);
+        const wasChecked = this.checked;
+        
+        // Блокируем повторные клики
+        isUpdating = true;
+        
+        // Оптимистичное обновление UI
+        if (wasChecked) {
+            row.classList.add('task-completed');
+            const statusSelect = row.querySelector('.task-status-select');
+            if (statusSelect) statusSelect.value = 'Завершена';
+        } else {
+            row.classList.remove('task-completed');
+            const statusSelect = row.querySelector('.task-status-select');
+            if (statusSelect) statusSelect.value = 'Новая';
+        }
+        
+        updateTaskCounters();
+        
+        // Отправляем запрос на сервер
+        fetch(`/task/${taskId}/toggle`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json'
             }
-            
-            updateTaskCounters();
-            
-            // Отправляем запрос на сервер
-            fetch(`/task/${taskId}/toggle`, {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Обновляем прогресс проекта
-                    updateProjectProgress(data.project_progress);
-                    
-                    // Обновляем статус в выпадающем списке
-                    const statusSelect = row.querySelector('.task-status-select');
-                    if (statusSelect) statusSelect.value = data.new_status;
-                    
-                    // Показываем уведомление
-                    showNotification(data.new_status === 'Завершена' ? '✅ Задача выполнена!' : '🔄 Задача возвращена в работу', 'success');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Обновляем прогресс проекта
+                updateProjectProgress(data.project_progress);
+                
+                // Синхронизируем статус в выпадающем списке
+                const statusSelect = row.querySelector('.task-status-select');
+                if (statusSelect) statusSelect.value = data.new_status;
+                
+                // Показываем уведомление
+                const message = data.new_status === 'Завершена' ? '✅ Задача выполнена!' : '🔄 Задача возвращена в работу';
+                showNotification(message, 'success');
+            } else {
                 // Откатываем изменения при ошибке
                 if (wasChecked) {
                     row.classList.remove('task-completed');
@@ -279,289 +337,86 @@
                 }
                 updateTaskCounters();
                 showNotification('Ошибка при обновлении статуса', 'danger');
-            });
-        });
-    });
-    
-    // Обработка изменения статуса из выпадающего списка
-    document.querySelectorAll('.task-status-select').forEach(select => {
-        select.addEventListener('change', function() {
-            const taskId = this.dataset.taskId;
-            const newStatus = this.value;
-            const row = document.getElementById(`task-${taskId}`);
-            const checkbox = row.querySelector('.task-checkbox');
-            
-            // Обновляем UI в зависимости от статуса
-            if (newStatus === 'Завершена') {
-                row.classList.add('task-completed');
-                if (checkbox) checkbox.checked = true;
-            } else {
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Откатываем изменения при ошибке
+            if (wasChecked) {
                 row.classList.remove('task-completed');
-                if (checkbox) checkbox.checked = false;
+                this.checked = false;
+            } else {
+                row.classList.add('task-completed');
+                this.checked = true;
             }
-            
             updateTaskCounters();
-            
-            // Отправляем запрос на сервер
-            fetch(`/task/${taskId}/update-status`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: `status=${encodeURIComponent(newStatus)}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateProjectProgress(data.project_progress);
-                    showNotification(`Статус задачи изменён на "${newStatus}"`, 'success');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showNotification('Ошибка при обновлении статуса', 'danger');
-            });
+            showNotification('Ошибка соединения с сервером', 'danger');
+        })
+        .finally(() => {
+            // Разблокируем после завершения запроса
+            setTimeout(() => {
+                isUpdating = false;
+            }, 500);
         });
     });
-    
-    // Функция для показа уведомлений
-    function showNotification(message, type = 'success') {
-        // Создаем элемент уведомления
-        const notification = document.createElement('div');
-        notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-        notification.style.top = '20px';
-        notification.style.right = '20px';
-        notification.style.zIndex = '9999';
-        notification.style.minWidth = '250px';
-        notification.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        // Автоматическое скрытие через 3 секунды
-        setTimeout(() => {
-            notification.classList.remove('show');
-            setTimeout(() => notification.remove(), 300);
-        }, 3000);
-    }
+});
 
-    // Класс для управления уведомлениями
-class NotificationManager {
-    constructor() {
-        this.notifications = [];
-        this.container = this.createContainer();
-    }
+// Обработка изменения статуса из выпадающего списка
+document.querySelectorAll('.task-status-select').forEach(select => {
+    // Удаляем старые обработчики
+    const newSelect = select.cloneNode(true);
+    select.parentNode.replaceChild(newSelect, select);
     
-    createContainer() {
-        let container = document.getElementById('notification-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'notification-container';
-            container.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                z-index: 9999;
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-            `;
-            document.body.appendChild(container);
+    newSelect.addEventListener('change', function() {
+        const taskId = this.dataset.taskId;
+        const newStatus = this.value;
+        const row = document.getElementById(`task-${taskId}`);
+        const checkbox = row.querySelector('.task-checkbox');
+        
+        // Блокируем обновления
+        if (isUpdating) return;
+        isUpdating = true;
+        
+        // Обновляем UI
+        if (newStatus === 'Завершена') {
+            row.classList.add('task-completed');
+            if (checkbox) checkbox.checked = true;
+        } else {
+            row.classList.remove('task-completed');
+            if (checkbox) checkbox.checked = false;
         }
-        return container;
-    }
-    
-    show(message, type = 'success', duration = 5000) {
-        const notification = this.createNotification(message, type);
-        this.container.appendChild(notification);
         
-        // Анимируем появление
-        setTimeout(() => {
-            notification.classList.add('show');
-        }, 10);
+        updateTaskCounters();
         
-        // Устанавливаем таймер на удаление
-        const timeoutId = setTimeout(() => {
-            this.hide(notification);
-        }, duration);
-        
-        // Сохраняем информацию об уведомлении
-        this.notifications.push({
-            element: notification,
-            timeoutId: timeoutId
-        });
-        
-        return notification;
-    }
-    
-    createNotification(message, type) {
-        const colors = {
-            success: { bg: '#d4edda', border: '#28a745', text: '#155724', icon: '✓' },
-            danger: { bg: '#f8d7da', border: '#dc3545', text: '#721c24', icon: '✗' },
-            warning: { bg: '#fff3cd', border: '#ffc107', text: '#856404', icon: '⚠' },
-            info: { bg: '#d1ecf1', border: '#17a2b8', text: '#0c5460', icon: 'ℹ' }
-        };
-        
-        const style = colors[type] || colors.success;
-        
-        const notification = document.createElement('div');
-        notification.className = 'notification-toast';
-        notification.style.cssText = `
-            background: ${style.bg};
-            border-left: 4px solid ${style.border};
-            border-radius: 8px;
-            padding: 12px 20px;
-            min-width: 280px;
-            max-width: 400px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            transform: translateX(100%);
-            opacity: 0;
-            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            cursor: pointer;
-            font-family: inherit;
-            font-size: 14px;
-            color: ${style.text};
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            backdrop-filter: blur(10px);
-        `;
-        
-        notification.innerHTML = `
-            <div style="
-                width: 24px;
-                height: 24px;
-                background: ${style.border};
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: white;
-                font-weight: bold;
-                font-size: 14px;
-            ">${style.icon}</div>
-            <div style="flex: 1;">${message}</div>
-            <div style="
-                width: 20px;
-                height: 20px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                opacity: 0.6;
-                transition: opacity 0.2s;
-            " class="notification-close">×</div>
-            <div style="
-                position: absolute;
-                bottom: 0;
-                left: 0;
-                height: 3px;
-                background: ${style.border};
-                width: 100%;
-                animation: shrinkWidth ${duration / 1000}s linear forwards;
-            "></div>
-        `;
-        
-        // Добавляем обработчик закрытия по клику на крестик
-        const closeBtn = notification.querySelector('.notification-close');
-        closeBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.hide(notification);
-        });
-        
-        // Закрытие по клику на уведомление
-        notification.addEventListener('click', (e) => {
-            if (e.target !== closeBtn) {
-                this.hide(notification);
+        // Отправляем запрос на сервер
+        fetch(`/task/${taskId}/update-status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: `status=${encodeURIComponent(newStatus)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateProjectProgress(data.project_progress);
+                showNotification(`Статус задачи изменён на "${newStatus}"`, 'success');
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Ошибка при обновлении статуса', 'danger');
+        })
+        .finally(() => {
+            setTimeout(() => {
+                isUpdating = false;
+            }, 500);
         });
-        
-        return notification;
-    }
-    
-    hide(notification) {
-        // Находим и очищаем таймер
-        const index = this.notifications.findIndex(n => n.element === notification);
-        if (index !== -1) {
-            clearTimeout(this.notifications[index].timeoutId);
-            this.notifications.splice(index, 1);
-        }
-        
-        // Анимируем исчезновение
-        notification.style.transform = 'translateX(100%)';
-        notification.style.opacity = '0';
-        
-        // Удаляем из DOM после анимации
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    }
-    
-    success(message, duration = 5000) {
-        return this.show(message, 'success', duration);
-    }
-    
-    error(message, duration = 5000) {
-        return this.show(message, 'danger', duration);
-    }
-    
-    warning(message, duration = 5000) {
-        return this.show(message, 'warning', duration);
-    }
-    
-    info(message, duration = 5000) {
-        return this.show(message, 'info', duration);
-    }
-}
+    });
+});
 
-// Создаем глобальный экземпляр
-const notificationManager = new NotificationManager();
-
-// Заменяем старую функцию showNotification
-function showNotification(message, type = 'success', duration = 5000) {
-    notificationManager.show(message, type, duration);
-}
-
-// Добавляем CSS анимацию в head документа
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes shrinkWidth {
-        from {
-            width: 100%;
-        }
-        to {
-            width: 0%;
-        }
-    }
-    
-    .notification-toast {
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .notification-toast.show {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    
-    .notification-toast:hover {
-        transform: translateX(-5px);
-        transition: transform 0.2s ease;
-    }
-    
-    .notification-close:hover {
-        opacity: 1 !important;
-        transform: scale(1.1);
-    }
-`;
-document.head.appendChild(style);
-    
-    // Обновляем счетчики при загрузке страницы
-    updateTaskCounters();
+// Обновляем счетчики при загрузке страницы
+updateTaskCounters();
 </script>
 {% endblock %}
