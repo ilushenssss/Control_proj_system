@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}{% if task %}Редактировать задачу{% else %}Создать задачу{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    {% if task %}Редактирование задачи{% else %}Создание задачи для проекта "{{ project.name }}"{% endif %}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Название задачи *</label>
+                        <input type="text" class="form-control" id="title" name="title" 
+                               value="{{ task.title if task else '' }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Описание</label>
+                        <textarea class="form-control" id="description" name="description" rows="4">{{ task.description if task else '' }}</textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="status" class="form-label">Статус</label>
+                            <select class="form-select" id="status" name="status">
+                                {% for status in STATUS_CHOICES %}
+                                <option value="{{ status }}" {% if task and task.status == status %}selected{% endif %}>
+                                    {{ status }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="priority" class="form-label">Приоритет</label>
+                            <select class="form-select" id="priority" name="priority">
+                                {% for priority in PRIORITY_CHOICES %}
+                                <option value="{{ priority }}" {% if task and task.priority == priority %}selected{% endif %}>
+                                    {{ priority }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="assignee" class="form-label">Исполнитель *</label>
+                        <input type="text" class="form-control" id="assignee" name="assignee" 
+                               value="{{ task.assignee if task else '' }}" required>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('project_detail', project_id=project.id) }}" class="btn btn-secondary">Отмена</a>
+                        <button type="submit" class="btn btn-primary">
+                            {% if task %}Сохранить изменения{% else %}Создать задачу{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

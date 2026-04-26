@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block title %}{% if project %}Редактировать проект{% else %}Создать проект с задачами{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .task-card {
+        background: #f8f9fa;
+        border-left: 4px solid #2A7DE1;
+        margin-bottom: 15px;
+        padding: 15px;
+        border-radius: 8px;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    .task-card:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .task-card.existing-task {
+        border-left-color: #28a745;
+        background: #f0f9f0;
+    }
+    .task-card.new-task {
+        border-left-color: #ffc107;
+        background: #fff9f0;
+    }
+    .btn-remove-task {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+    .btn-add-task {
+        margin-top: 10px;
+    }
+    .task-counter {
+        font-size: 0.9em;
+        color: #6c757d;
+        margin-bottom: 10px;
+    }
+    .task-type-badge {
+        position: absolute;
+        top: 10px;
+        right: 50px;
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    {% if project %}
+                        Редактирование проекта: {{ project.name }}
+                    {% else %}
+                        Создание нового проекта с задачами
+                    {% endif %}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="projectForm">
+                    <!-- Информация о проекте -->
+                    <h5 class="mb-3">Основная информация</h5>
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Название проекта *</label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               value="{{ project.name if project else '' }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Описание</label>
+                        <textarea class="form-control" id="description" name="description" rows="3">{{ project.description if project else '' }}</textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="start_date" class="form-label">Дата начала *</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" 
+                                   value="{{ project.start_date.strftime('%Y-%m-%d') if project and project.start_date else '' }}" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="end_date" class="form-label">Дата окончания</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" 
+                                   value="{{ project.end_date.strftime('%Y-%m-%d') if project and project.end_date else '' }}">
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <!-- Список задач -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">Задачи проекта</h5>
+                        <span class="task-counter" id="taskCounter">Задач: 0</span>
+                    </div>
+                    
+                    <div id="tasksContainer">
+                        <!-- Здесь будут динамически добавляться задачи -->
+                    </div>
+                    
+                    <button type="button" class="btn btn-outline-primary btn-add-task" onclick="addNewTask()">
+                        <i class="bi bi-plus-lg"></i> Добавить новую задачу
+                    </button>
+                    
+                    <input type="hidden" name="tasks_json" id="tasksJson">
+                    
+                    <hr class="my-4">
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('index') }}" class="btn btn-secondary">Отмена</a>
+                        <button type="submit" class="btn btn-primary">
+                            {% if project %}Сохранить изменения{% else %}Создать проект с задачами{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Массив для хранения задач
+    let tasks = [];
+    
+    {% if project and project.tasks %}
+        // Загружаем существующие задачи проекта
+        {% for task in project.tasks %}
+            tasks.push({
+                id: {{ task.id }},
+                title: "{{ task.title|replace('"', '\\"')|replace('\n', '\\n') }}",
+                description: "{{ task.description|replace('"', '\\"')|replace('\n', '\\n') if task.description else '' }}",
+                status: "{{ task.status }}",
+                priority: "{{ task.priority }}",
+                assignee: "{{ task.assignee|replace('"', '\\"') }}",
+                isNew: false
+            });
+        {% endfor %}
+    {% endif %}
+    
+    // Функция для добавления новой задачи
+    function addNewTask() {
+        tasks.push({
+            id: null,
+            title: '',
+            description: '',
+            status: 'Новая',
+            priority: 'Средний',
+            assignee: '',
+            isNew: true
+        });
+        renderTasks();
+    }
+    
+    // Функция для удаления задачи
+    function removeTask(index) {
+        const task = tasks[index];
+        let message = 'Удалить эту задачу?';
+        
+        if (!task.isNew) {
+            message = 'Вы уверены, что хотите удалить существующую задачу? Это действие нельзя отменить.';
+        }
+        
+        if (confirm(message)) {
+            tasks.splice(index, 1);
+            renderTasks();
+        }
+    }
+    
+    // Функция для обновления данных задачи
+    function updateTask(index, field, value) {
+        tasks[index][field] = value;
+    }
+    
+    // Функция для отображения всех задач
+    function renderTasks() {
+        const container = document.getElementById('tasksContainer');
+        const counter = document.getElementById('taskCounter');
+        
+        if (tasks.length === 0) {
+            container.innerHTML = '<div class="alert alert-info">Пока нет добавленных задач. Нажмите "Добавить новую задачу", чтобы создать задачу.</div>';
+            counter.innerHTML = 'Задач: 0';
+            return;
+        }
+        
+        counter.innerHTML = `Задач: ${tasks.length} (${tasks.filter(t => !t.isNew).length} существующих, ${tasks.filter(t => t.isNew).length} новых)`;
+        
+        let html = '';
+        tasks.forEach((task, index) => {
+            const taskClass = task.isNew ? 'new-task' : 'existing-task';
+            const taskTypeLabel = task.isNew ? '🆕 Новая задача' : '📌 Существующая задача';
+            
+            html += `
+                <div class="task-card ${taskClass}" data-task-index="${index}">
+                    <button type="button" class="btn btn-sm btn-danger btn-remove-task" onclick="removeTask(${index})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                    <span class="task-type-badge badge ${task.isNew ? 'bg-warning' : 'bg-success'}">
+                        ${taskTypeLabel}
+                    </span>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label small fw-bold">Название задачи *</label>
+                            <input type="text" class="form-control form-control-sm" 
+                                   value="${escapeHtml(task.title)}"
+                                   onchange="updateTask(${index}, 'title', this.value)"
+                                   placeholder="Введите название задачи">
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label small fw-bold">Исполнитель *</label>
+                            <input type="text" class="form-control form-control-sm" 
+                                   value="${escapeHtml(task.assignee)}"
+                                   onchange="updateTask(${index}, 'assignee', this.value)"
+                                   placeholder="ФИО исполнителя">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Описание</label>
+                        <textarea class="form-control form-control-sm" rows="2"
+                                  onchange="updateTask(${index}, 'description', this.value)"
+                                  placeholder="Описание задачи">${escapeHtml(task.description)}</textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label small fw-bold">Статус</label>
+                            <select class="form-select form-select-sm" onchange="updateTask(${index}, 'status', this.value)">
+                                <option value="Новая" ${task.status === 'Новая' ? 'selected' : ''}>Новая</option>
+                                <option value="В работе" ${task.status === 'В работе' ? 'selected' : ''}>В работе</option>
+                                <option value="На проверке" ${task.status === 'На проверке' ? 'selected' : ''}>На проверке</option>
+                                <option value="Завершена" ${task.status === 'Завершена' ? 'selected' : ''}>Завершена</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label small fw-bold">Приоритет</label>
+                            <select class="form-select form-select-sm" onchange="updateTask(${index}, 'priority', this.value)">
+                                <option value="Низкий" ${task.priority === 'Низкий' ? 'selected' : ''}>Низкий</option>
+                                <option value="Средний" ${task.priority === 'Средний' ? 'selected' : ''}>Средний</option>
+                                <option value="Высокий" ${task.priority === 'Высокий' ? 'selected' : ''}>Высокий</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+    
+    // Функция для экранирования HTML
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Перед отправкой формы сохраняем задачи в скрытое поле
+    document.getElementById('projectForm').addEventListener('submit', function(e) {
+        // Валидация: проверяем, что хотя бы у одной задачи есть название
+        const hasValidTasks = tasks.some(task => task.title && task.title.trim());
+        const projectName = document.getElementById('name').value.trim();
+        
+        if (!projectName) {
+            e.preventDefault();
+            alert('Пожалуйста, укажите название проекта');
+            return;
+        }
+        
+        // Проверяем задачи с пустыми названиями
+        const tasksWithEmptyTitles = tasks.filter(task => !task.title || !task.title.trim());
+        if (tasksWithEmptyTitles.length > 0) {
+            const confirmSubmit = confirm(`Внимание! ${tasksWithEmptyTitles.length} задач(а) с пустыми названиями не будут сохранены. Продолжить?`);
+            if (!confirmSubmit) {
+                e.preventDefault();
+                return;
+            }
+        }
+        
+        // Фильтруем задачи с пустыми названиями и подготавливаем данные для отправки
+        const validTasks = tasks.filter(task => task.title && task.title.trim());
+        const tasksForSubmit = validTasks.map(task => ({
+            id: task.id,
+            title: task.title.trim(),
+            description: task.description,
+            status: task.status,
+            priority: task.priority,
+            assignee: task.assignee
+        }));
+        
+        document.getElementById('tasksJson').value = JSON.stringify(tasksForSubmit);
+    });
+    
+    // Валидация дат
+    const form = document.getElementById('projectForm');
+    form.addEventListener('submit', function(e) {
+        const startDate = document.getElementById('start_date').value;
+        const endDate = document.getElementById('end_date').value;
+        
+        if (endDate && startDate && endDate < startDate) {
+            e.preventDefault();
+            alert('Дата окончания не может быть раньше даты начала!');
+        }
+    });
+    
+    // Инициализация: если нет задач и это новый проект, добавляем одну пустую задачу
+    {% if not project %}
+    if (tasks.length === 0) {
+        tasks.push({
+            id: null,
+            title: '',
+            description: '',
+            status: 'Новая',
+            priority: 'Средний',
+            assignee: '',
+            isNew: true
+        });
+    }
+    {% endif %}
+    
+    // Отображаем задачи при загрузке страницы
+    renderTasks();
+</script>
+{% endblock %}

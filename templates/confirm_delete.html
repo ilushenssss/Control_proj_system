@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Путеводитель проектов — система задач</title>
+    <style>
+        /* ========== ЦВЕТОВЫЕ КОНСТАНТЫ (белый + голубой) ========== */
+        :root {
+            --color-white: #FFFFFF;
+            --color-blue-light: #EFF7FF;
+            --color-blue-primary: #2A7DE1;
+            --color-blue-dark: #1E5AAC;
+            --color-blue-soft: #D4E7FA;
+            --color-blue-border: #C2DDF8;
+            --color-blue-bg-card: #F9FCFE;
+            --color-gray-text: #1F2A3A;
+            --color-gray-muted: #5A6E7C;
+            --color-gray-light: #EFF2F5;
+            --color-success-bg: #E6F4EA;
+            --color-success-text: #1E7B48;
+            --color-warning-bg: #FFF3E0;
+            --color-warning-text: #C26B1A;
+            --color-danger-bg: #FFEDED;
+            --color-danger-text: #C23D3D;
+            
+            /* Яндекс.Путешествия тени */
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.03);
+            --shadow-md: 0 8px 20px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.02);
+            --shadow-hover: 0 16px 28px rgba(42, 125, 225, 0.12), 0 4px 12px rgba(0, 0, 0, 0.04);
+            --radius-card: 24px;
+            --radius-element: 14px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--color-blue-light);
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+            color: var(--color-gray-text);
+            line-height: 1.4;
+        }
+
+        .app-wrapper {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ========== HEADER ========== */
+        .main-header {
+            background: var(--color-white);
+            border-bottom: 1px solid var(--color-blue-border);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .header-container {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 14px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon svg {
+            filter: drop-shadow(0 2px 4px rgba(42,125,225,0.2));
+        }
+
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+
+        .logo-main {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--color-blue-dark);
+            letter-spacing: -0.2px;
+        }
+
+        .logo-sub {
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: var(--color-gray-muted);
+            letter-spacing: 0.3px;
+        }
+
+        .header-stats {
+            background: var(--color-blue-light);
+            padding: 8px 20px;
+            border-radius: 60px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--color-blue-primary);
+            border: 1px solid var(--color-blue-border);
+        }
+
+        /* ========== MAIN ========== */
+        .main-content {
+            flex: 1;
+        }
+
+        .content-container {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 32px 28px;
+        }
+
+        /* welcome panel */
+        .welcome-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-bottom: 40px;
+            background: transparent;
+        }
+
+        .welcome-text h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--color-blue-primary) 0%, #164a82 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+
+        .welcome-text p {
+            color: var(--color-gray-muted);
+            font-size: 0.95rem;
+            max-width: 500px;
+        }
+
+        .primary-button {
+            background: var(--color-white);
+            border: 1px solid var(--color-blue-border);
+            padding: 10px 24px;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--color-blue-primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: var(--shadow-sm);
+            font-family: inherit;
+        }
+
+        .primary-button:hover {
+            background: var(--color-blue-primary);
+            color: white;
+            border-color: var(--color-blue-primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        /* ========== СЕТКА ПРОЕКТОВ ========== */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 28px;
+        }
+
+        /* карточка */
+        .project-card {
+            background: var(--color-white);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow-md);
+            transition: all 0.25s ease;
+            border: 1px solid rgba(42, 125, 225, 0.1);
+            overflow: hidden;
+        }
+
+        .project-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+            border-color: var(--color-blue-soft);
+        }
+
+        .project-header {
+            padding: 20px 24px 12px 24px;
+            border-bottom: 1px solid var(--color-blue-soft);
+            background: rgba(239, 247, 255, 0.3);
+        }
+
+        .project-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .project-name {
+            background: linear-gradient(145deg, #1F2A3A, #2C3E50);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        /* прогресс бар */
+        .progress-container {
+            margin: 8px 0 6px;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: var(--color-gray-muted);
+            margin-bottom: 8px;
+        }
+
+        .progress-bar-bg {
+            background: var(--color-blue-soft);
+            border-radius: 40px;
+            height: 6px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: var(--color-blue-primary);
+            width: 0%;
+            height: 100%;
+            border-radius: 40px;
+            transition: width 0.35s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+        }
+
+        .project-stats {
+            display: flex;
+            gap: 24px;
+            margin-top: 16px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: var(--color-gray-muted);
+        }
+
+        .project-stats span {
+            font-weight: 700;
+            color: var(--color-gray-text);
+            margin-left: 4px;
+        }
+
+        /* список задач */
+        .tasks-list {
+            padding: 12px 20px 20px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: var(--color-white);
+        }
+
+        .task-item {
+            background: var(--color-blue-light);
+            border-radius: var(--radius-element);
+            padding: 12px 14px;
+            transition: all 0.2s;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+        }
+
+        .task-item:hover {
+            background: #E4F0FE;
+            transform: translateX(3px);
+            border-left-color: var(--color-blue-primary);
+        }
+
+        .task-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .task-title {
+            font-weight: 600;
+            font-size: 0.88rem;
+            color: var(--color-gray-text);
+        }
+
+        .task-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        /* бейджи статусов */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 60px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            background: var(--color-white);
+        }
+
+        .status-done {
+            background: var(--color-success-bg);
+            color: var(--color-success-text);
+        }
+
+        .status-progress {
+            background: var(--color-blue-soft);
+            color: var(--color-blue-primary);
+        }
+
+        .status-pending {
+            background: var(--color-warning-bg);
+            color: var(--color-warning-text);
+        }
+
+        /* приоритеты */
+        .priority-high {
+            background: var(--color-danger-bg);
+            color: var(--color-danger-text);
+            border-radius: 60px;
+            padding: 3px 10px;
+            font-weight: 600;
+            font-size: 0.7rem;
+        }
+
+        .priority-medium {
+            background: var(--color-warning-bg);
+            color: #b45f1b;
+            border-radius: 60px;
+            padding: 3px 10px;
+            font-size: 0.7rem;
+        }
+
+        .priority-low {
+            background: var(--color-blue-soft);
+            color: var(--color-blue-dark);
+            border-radius: 60px;
+            padding: 3px 10px;
+            font-size: 0.7rem;
+        }
+
+        .assignee {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: var(--color-gray-muted);
+        }
+
+        /* футер */
+        .main-footer {
+            margin-top: 48px;
+            border-top: 1px solid var(--color-blue-border);
+            background: var(--color-white);
+        }
+
+        .footer-container {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 20px 28px;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--color-gray-muted);
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            background: white;
+            border-radius: 32px;
+            padding: 60px 20px;
+            text-align: center;
+            border: 1px dashed var(--color-blue-border);
+        }
+
+        /* адаптив */
+        @media (max-width: 680px) {
+            .content-container {
+                padding: 20px 16px;
+            }
+            .projects-grid {
+                grid-template-columns: 1fr;
+            }
+            .welcome-text h1 {
+                font-size: 1.7rem;
+            }
+            .header-container {
+                padding: 12px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-wrapper">
+        <!-- Шапка -->
+        <header class="main-header">
+            <div class="header-container">
+                <div class="logo-area">
+                    <div class="logo-icon">
+                        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M16 4L4 12L16 20L28 12L16 4Z" fill="#2A7DE1" stroke="#1E5AAC" stroke-width="1.2"/>
+                            <path d="M4 12L16 20L16 28L4 20L4 12Z" fill="#D4E7FA" stroke="#1E5AAC" stroke-width="1.2"/>
+                            <path d="M28 12L16 20L16 28L28 20L28 12Z" fill="#A8C9F0" stroke="#1E5AAC" stroke-width="1.2"/>
+                            <circle cx="16" cy="16" r="2" fill="white"/>
+                        </svg>
+                    </div>
+                    <div class="logo-text">
+                        <span class="logo-main">Путеводитель</span>
+                        <span class="logo-sub">проектов</span>
+                    </div>
+                </div>
+                <div class="header-stats" id="globalStatsBadge"></div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="content-container">
+                <div class="welcome-panel">
+                    <div class="welcome-text">
+                        <h1>Маршруты задач</h1>
+                        <p>Отслеживайте прогресс проектов, статусы и приоритеты — как в настоящем путешествии</p>
+                    </div>
+                    <button class="primary-button" id="addDemoProjectBtn">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        </svg>
+                        Новый проект
+                    </button>
+                </div>
+
+                <div class="projects-grid" id="projectsGrid"></div>
+            </div>
+        </main>
+
+        <footer class="main-footer">
+            <div class="footer-container">
+                <p>© Путеводитель проектов · Управление задачами в стиле путешествий</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // ========== ДАННЫЕ ==========
+        let projectsData = [
+            {
+                id: 1,
+                name: "Байкальская экспедиция",
+                tasks: [
+                    { id: 101, title: "Собрать команду гидов", status: "done", assignee: "Анна К.", priority: "high" },
+                    { id: 102, title: "Забронировать маршруты", status: "in_progress", assignee: "Олег М.", priority: "medium" },
+                    { id: 103, title: "Разработать навигацию", status: "pending", assignee: "Илья В.", priority: "high" },
+                    { id: 104, title: "Создать фотоотчёт", status: "pending", assignee: "Мария С.", priority: "low" }
+                ]
+            },
+            {
+                id: 2,
+                name: "Алтайские тропы",
+                tasks: [
+                    { id: 201, title: "Поиск партнёров", status: "done", assignee: "Денис П.", priority: "high" },
+                    { id: 202, title: "Составить карту треков", status: "done", assignee: "Елена З.", priority: "medium" },
+                    { id: 203, title: "Запустить рекламную кампанию", status: "in_progress", assignee: "Роман Т.", priority: "high" },
+                    { id: 204, title: "Подготовить трансфер", status: "pending", assignee: "Света Н.", priority: "low" },
+                    { id: 205, title: "Проверить безопасность", status: "pending", assignee: "Артур К.", priority: "medium" }
+                ]
+            },
+            {
+                id: 3,
+                name: "Камчатка вулканы",
+                tasks: [
+                    { id: 301, title: "Согласование с МЧС", status: "done", assignee: "Вероника Д.", priority: "high" },
+                    { id: 302, title: "Организация лагерей", status: "in_progress", assignee: "Максим Л.", priority: "high" },
+                    { id: 303, title: "Закупка снаряжения", status: "pending", assignee: "Алина Р.", priority: "low" }
+                ]
+            }
+        ];
+
+        // ========== HELPER ФУНКЦИИ ==========
+        function getStatusText(status) {
+            const map = {
+                'done': '✅ Завершён',
+                'in_progress': '🔄 В пути',
+                'pending': '⏳ На старте'
+            };
+            return map[status] || status;
+        }
+
+        function getPriorityLabel(priority) {
+            const map = {
+                'high': '⚡ Высокий',
+                'medium': '🟡 Средний',
+                'low': '🔵 Низкий'
+            };
+            return map[priority] || priority;
+        }
+
+        function getPriorityClass(priority) {
+            if (priority === 'high') return 'priority-high';
+            if (priority === 'medium') return 'priority-medium';
+            return 'priority-low';
+        }
+
+        function getStatusClass(status) {
+            if (status === 'done') return 'status-done';
+            if (status === 'in_progress') return 'status-progress';
+            return 'status-pending';
+        }
+
+        function calculateProgress(tasks) {
+            if (!tasks.length) return 0;
+            const doneCount = tasks.filter(task => task.status === 'done').length;
+            return Math.round((doneCount / tasks.length) * 100);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        // ========== ОТРИСОВКА ЗАДАЧИ ==========
+        function renderTask(task, projectId, taskIndex) {
+            return `
+                <div class="task-item" data-project-id="${projectId}" data-task-index="${taskIndex}">
+                    <div class="task-title-row">
+                        <span class="task-title">${escapeHtml(task.title)}</span>
+                        <div class="task-meta">
+                            <span class="status-badge ${getStatusClass(task.status)}">${getStatusText(task.status)}</span>
+                            <span class="${getPriorityClass(task.priority)}">${getPriorityLabel(task.priority)}</span>
+                        </div>
+                    </div>
+                    <div class="assignee">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.2"/>
+                            <path d="M2 13C2 10.5 5 9 8 9C11 9 14 10.5 14 13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                        </svg>
+                        ${escapeHtml(task.assignee)}
+                    </div>
+                </div>
+            `;
+        }
+
+        // ========== ОТРИСОВКА ПРОЕКТА ==========
+        function renderProject(project, projectIndex) {
+            const tasks = project.tasks;
+            const progress = calculateProgress(tasks);
+            const totalTasks = tasks.length;
+            const doneTasks = tasks.filter(t => t.status === 'done').length;
+            
+            const tasksHtml = tasks.map((task, idx) => renderTask(task, project.id, idx)).join('');
+            
+            return `
+                <div class="project-card">
+                    <div class="project-header">
+                        <div class="project-title">
+                            <span class="project-name">🗺️ ${escapeHtml(project.name)}</span>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-label">
+                                <span>Прогресс путешествия</span>
+                                <span>${progress}%</span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-fill" style="width: ${progress}%;"></div>
+                            </div>
+                        </div>
+                        <div class="project-stats">
+                            <div>📌 Всего этапов: <span>${totalTasks}</span></div>
+                            <div>✅ Пройдено: <span>${doneTasks}</span></div>
+                            <div>📈 Маршрут: <span>${progress}%</span></div>
+                        </div>
+                    </div>
+                    <div class="tasks-list">
+                        ${tasksHtml || '<div style="padding: 16px; text-align: center; color: var(--color-gray-muted);">🚀 Нет задач</div>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        // ========== ОБНОВЛЕНИЕ СТАТИСТИКИ ==========
+        function updateGlobalStats() {
+            const badge = document.getElementById('globalStatsBadge');
+            if (!badge) return;
+            
+            let totalTasks = 0;
+            let totalDone = 0;
+            
+            projectsData.forEach(project => {
+                totalTasks += project.tasks.length;
+                totalDone += project.tasks.filter(t => t.status === 'done').length;
+            });
+            
+            const overallPercent = totalTasks === 0 ? 0 : Math.round((totalDone / totalTasks) * 100);
+            badge.innerHTML = `✨ ${projectsData.length} проектов  •  ${totalTasks} задач  •  выполнено ${overallPercent}%`;
+        }
+
+        // ========== ГЛОБАЛЬНЫЙ РЕНДЕР ==========
+        function renderAllProjects() {
+            const grid = document.getElementById('projectsGrid');
+            if (!grid) return;
+            
+            if (projectsData.length === 0) {
+                grid.innerHTML = `<div class="empty-state">
+                    <p style="color: var(--color-gray-muted);">✈️ Ещё нет ни одного проекта. Создайте новое путешествие!</p>
+                </div>`;
+                updateGlobalStats();
+                return;
+            }
+            
+            const projectsHtml = projectsData.map((project, idx) => renderProject(project, idx)).join('');
+            grid.innerHTML = projectsHtml;
+            updateGlobalStats();
+        }
+
+        // ========== ИЗМЕНЕНИЕ СТАТУСА ЗАДАЧИ ==========
+        function setupTaskStatusToggle() {
+            const grid = document.getElementById('projectsGrid');
+            if (!grid) return;
+            
+            grid.addEventListener('click', (e) => {
+                const taskItem = e.target.closest('.task-item');
+                if (!taskItem) return;
+                
+                const projectId = parseInt(taskItem.dataset.projectId);
+                const taskIndex = parseInt(taskItem.dataset.taskIndex);
+                
+                const project = projectsData.find(p => p.id === projectId);
+                if (!project) return;
+                
+                const task = project.tasks[taskIndex];
+                if (!task) return;
+                
+                // Циклическое изменение статуса
+                if (task.status === 'pending') {
+                    task.status = 'in_progress';
+                } else if (task.status === 'in_progress') {
+                    task.status = 'done';
+                } else if (task.status === 'done') {
+                    task.status = 'pending';
+                }
+                
+                // Перерисовка
+                renderAllProjects();
+            });
+        }
+
+        // ========== ДОБАВЛЕНИЕ НОВОГО ПРОЕКТА ==========
+        function addDemoProject() {
+            const newId = Date.now();
+            const newProject = {
+                id: newId,
+                name: `Экспедиция #${projectsData.length + 1}`,
+                tasks: [
+                    { id: newId + 1, title: "Составить план маршрута", status: "pending", assignee: "Капитан", priority: "high" },
+                    { id: newId + 2, title: "Закупить билеты", status: "pending", assignee: "Логист", priority: "medium" },
+                    { id: newId + 3, title: "Подготовить отчёт", status: "pending", assignee: "Аналитик", priority: "low" }
+                ]
+            };
+            projectsData.push(newProject);
+            renderAllProjects();
+        }
+
+        // ========== ИНИЦИАЛИЗАЦИЯ ==========
+        function init() {
+            renderAllProjects();
+            setupTaskStatusToggle();
+            
+            const addButton = document.getElementById('addDemoProjectBtn');
+            if (addButton) {
+                addButton.addEventListener('click', addDemoProject);
+            }
+        }
+        
+        // Запуск после загрузки страницы
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
